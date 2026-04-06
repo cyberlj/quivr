@@ -1,0 +1,73 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug Brain Entry (Build)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/core/scripts/debug_brain_entry.py",
+            "cwd": "${workspaceFolder}/core",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--mode",
+                "build"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/core:${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Python: Debug Brain Entry (Ask)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/core/scripts/debug_brain_entry.py",
+            "cwd": "${workspaceFolder}/core",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--mode",
+                "ask"
+            ],
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/core:${env:PYTHONPATH}"
+            }
+        },
+        {
+            "name": "Python: Remote Attach",
+            "type": "python",
+            "request": "attach",
+            "connect": {
+                "host": "localhost",
+                "port": 5678
+            },
+            "pathMappings": [
+                {
+                    "localRoot": "${workspaceFolder}/backend",
+                    "remoteRoot": "."
+                }
+            ],
+            "justMyCode": true
+        },
+        {
+            "name": "Python: Debug Test Script",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/backend/test_process_file_and_notify.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "Python: Debug",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend:${env:PYTHONPATH}"
+            },
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
