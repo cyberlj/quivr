@@ -85,8 +85,31 @@ class LLMTokenizer:
 
         return total_size if total_size > 0 else self._default_size
 
+    
+    # 这个load方法的作用：加载或获取一个分词器（tokenizer）实例，并对同一个tokenizer_hub只加载/初始化一次，重复利用。
+    # 核心机制是用一个cache（内存缓存字典）来避免反复初始化同一个分词器，节省内存和加载时间。
+    #
+    # cache在这里存的内容就是——“分词器对象”本身（不是模型参数，不是embedding），例如：AutoTokenizer之类的实例。
+    # 为什么用tokenizer_hub算cache_key？——因为一个模型（或一种分词规则）唯一决定于它在huggingface等的名称（如"gpt2"或"path/to/custom-tokenizer"），
+    # 只要tokenizer_hub一样，加载出来的分词器结果也一样，所以直接哈希字符串即可。
+    #
+    # 这个cache是进程内存cache，重启进程或者掉电就没了，也不是Redis那类持久缓存（实际通常不会用redis/celery等分布式cache存分词器对象，因为它体积大且不可序列化，只能存在程序自身的RAM里）。
+    #
+    # 分词器是什么？就是“词典+规则”。像新华字典+查字方法，但更贴近“拼图说明书”：输入一大串字/词/符号→按规则拆成最少片段，每片有编号id。
+    # 举例：假如tokenizer切英文，“Apple is red.”→["Apple", " is", " red", "."]→[15496, 318, 665, 13]，像ASCII码，但粒度和编号不是ASCII。
+    # 但分词器一般不是一个字母一个编号（不像ASCII是单字符），而是“基于语义和压缩效率”的片段。
+    # 汉字一般是一字一编号，英文/数字/符号就是按规则分块，碎粹顺序变化。
+    #
+    # 它和embedding不同：分词只是“编号编码”→id序列，embedding才是“向量化”那一步（进模型前的下一步）。
+    #
+    # 为什么要分词？因为模型不能吃普通字/字符串，只认token id序列，这样统一方便计算、存储和推理，也能对齐上下文窗口的限制，提升效率。
+    # 类比：分词器像“查码器”，拿到每片token的唯一id，让后续embedding/LLM模块处理。
     @classmethod
-    def load(cls, tokenizer_hub: str, fallback_tokenizer: str):
+    def load(
+        cls,
+        tokenizer_hub: str,      # 参数1：tokenizer_hub，表示分词器仓库名或路径。常指定为模型名（如 "gpt2" 或 "path/to/tokenizer"），唯一决定要加载/复用哪个分词器。类似“去哪下载分词说明书”。
+        fallback_tokenizer: str  # 参数2：fallback_tokenizer，备用分词器编码名。当指定的tokenizer_hub不可用或加载失败时，将回退用此名称对应的分词器（如'tiktoken'的编码名），保证不会完全出错。用于兜底。
+    ):
         cache_key = hash(str(tokenizer_hub))
 
         # If in cache, update last access time and return

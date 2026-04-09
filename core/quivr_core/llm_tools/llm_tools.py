@@ -25,6 +25,8 @@ TOOLS_LISTS = {
 class LLMToolFactory:
     @staticmethod
     def create_tool(tool_name: str, config: Dict[str, Any]) -> Union[ToolWrapper, Type]:
+        # 这里的 category 是工具类别的名称 (字符串)，比如 "web_search" 或 "other"
+        # tools_class 是对应类别的工具类（如 WebSearchTools, OtherTools），类里定义了 tools 和 create_tool 方法
         for category, tools_class in TOOLS_CATEGORIES.items():
             if tool_name in tools_class.tools:
                 return tools_class.create_tool(tool_name, config)

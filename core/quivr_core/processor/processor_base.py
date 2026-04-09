@@ -19,12 +19,16 @@ R = TypeVar("R", covariant=True)
 class ProcessedDocument(Generic[R]):
     chunks: List[Document]
     processor_cls: str
+    # 这里没有直接用 Any，而是用 R 这个类型变量（TypeVar），是为了让 ProcessedDocument 能“泛型”——即支持不同的处理结果类型（比如 str、dict、或者别的结构体），由模块实例化或子类化时灵活指定。这样类型检查工具能更精确推断每次用到的 processor_response 的真实类型，代码更安全、可维护、提示更智能。如果用 Any，就永远没法知道 processor_response 具体是什么类型，类型检查和 IDE 支持都会变弱。
     processor_response: R
-
 
 # TODO: processors should be cached somewhere ?
 # The processor should be cached by processor type
 # The cache should use a single
+# TODO: 未来需要实现处理器（processor）缓存机制
+# 建议按处理器类型缓存，可以使用单例或全局缓存以提升文件处理性能。
+# 原因说明：有些处理器的初始化过程可能涉及较重的资源创建（如加载大模型、初始化分词器、导入外部依赖），每次实例化都会带来多余的开销。
+# 通过缓存同类型的 processor 实例，避免重复初始化，能减少内存消耗、提升文件处理速度，整体优化系统资源利用率。
 class ProcessorBase(ABC, Generic[R]):
     supported_extensions: list[FileExtension | str]
 

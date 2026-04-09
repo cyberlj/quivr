@@ -24,6 +24,28 @@ logger = logging.getLogger("quivr_core")
 
 
 def model_supports_function_calling(model_name: str):
+    """
+    判断给定的模型名是否支持 function calling（函数调用）。
+
+    llama2不支持function calling，它主要支持基础的文本生成和对话（completion/prompt-based chat），
+    即：只能按纯文本输入-输出完成对话，不理解 nor 响应显式的“函数调用”格式 nor OpenAI function calling 协议。
+    对于工具调用、工具式多步工作流、结构化返回值（如 function/tool-calling、OpenAI Tool API）的场景，llama2 及“test”、“ollama3”等模型均无法原生支持，通常只能退化为普通问答。
+
+    它做了什么：
+        过滤掉已知不支持 function calling 的模型（如 llama2、test、ollama3），
+        其它模型一律视为支持 function calling，返回 True。
+
+    为什么这样设计：
+        用于 RAG/对话工作流中判断是否可以下发 function calling 相关参数给模型调用接口。
+        保证兼容性，防止不支持的模型收到 function call 参数导致异常或无效响应。
+
+    执行顺序：
+        1. 定义一个不支持 function calling 的模型名列表
+        2. 检查传入的 model_name 是否在该列表外
+        3. 在调用链决策是否启用 function calling
+    """
+    models_not_supporting_function_calls: list[str] = ["llama2", "test", "ollama3"]
+    return model_name not in models_not_supporting_function_calls
     models_not_supporting_function_calls: list[str] = ["llama2", "test", "ollama3"]
 
     return model_name not in models_not_supporting_function_calls

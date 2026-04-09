@@ -27,7 +27,14 @@ def build_fake_llm() -> LLMEndpoint:
         "Gold est decrit dans le document comme un liquide de couleur bleuatre.",
         "The document says gold is a liquid of blue-like colour.",
     ]
+    # FakeListChatModel是一个子类，它本质还是Python的dataclass风格定义，没有自定义__init__方法。
+    # 但因为它继承自langchain_core里SimpleChatModel（进一步是BaseModel），
+    # 所以它可以通过关键字参数直接注入responses等字段，自动完成对应属性赋值。
+    # 这样responses参数其实底层通过dataclasses/pydantic提供的默认构造器注入进去了。
     llm = FakeListChatModel(responses=responses)
+    # FakeListChatModel 是 langchain-core 提供的测试专用模型（fake/模拟）——它不会连任何真实大模型，只是返回预设的字符串，方便本地调试/单元测试用。
+    # 这里 model="fake_model" 也是占位，和真实模型名（如 gpt-4o、qwen、claude-3 等）没任何实际推理功能绑定。
+    # 所以这类 fake_model/FakeListChatModel 配合用法，属于 mock 测试场景，完全离线可跑，无需环境变量、API Key 或联网依赖。
     return LLMEndpoint(llm=llm, llm_config=LLMEndpointConfig(model="fake_model"))
 
 
@@ -35,6 +42,11 @@ async def main() -> None:
     parser = argparse.ArgumentParser(
         description="Minimal debug entry for stepping through Brain build and ask flows."
     )
+    # 这几行代码通过 parser.add_argument 方法依次注册了 --mode、--text 和 --question 三个命令行参数：
+    # 1. --mode：控制程序运行模式，是用来“只建库”还是“建库并提问”。实际影响后面主流程是仅执行建库（build），还是建库+问答（ask）。默认值 'build'。
+    # 2. --text：指定写入临时 txt 文件的字符串内容。方便调试时自定义 ingest 内容，无需手动编辑文件。默认文本为 "Gold is a liquid of blue-like colour."。
+    # 3. --question：调试提问时实际送入 RAG 系统的英文问题。便于灵活切换不同问句验证效果。默认问题是 "what is gold? answer in french"。
+    # 这些参数让 debug_brain_entry.py 脚本既可以一键复现固定流程，也支持命令行动态替换测试内容和交互模式，便于开发者在不同输入/问题下快速定位和复查核心逻辑。
     parser.add_argument(
         "--mode",
         choices=["build", "ask"],
