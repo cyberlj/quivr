@@ -87,6 +87,9 @@ async def load_qfile(brain_id: UUID, path: str | Path):
     except ValueError:
         id = uuid4()
 
+    # 这里没有赋值 metadata，是因为 load_qfile 这个入口本身没有传递“额外业务元数据”参数（比如上传时的自定义标签、描述、外部引用等），它只登记了和文件内容/路径/归属相关的核心属性。
+    # QuivrFile 的 metadata 字段主要预留给后续管道里 processor/storage 层传递附加信息（如解析出来的作者、文本摘要、外部关联），而 load_qfile 只负责原始文件的基础属性采集。
+    # 如果业务上需要在登记时就带 metadata，可以给 load_qfile 增加一个 metadata 参数，然后在这里补 metadata=metadata。
     return QuivrFile(
         id=id,
         brain_id=brain_id,
@@ -94,7 +97,12 @@ async def load_qfile(brain_id: UUID, path: str | Path):
         original_filename=path.name,
         file_extension=get_file_extension(path),
         file_size=file_size,
-        file_sha1=file_sha1,
+        file_sha1=file_sha1,  # 这里只负责收集文件内容的SHA1指纹，无论内容是否和已有文件重复，系统每次“加载”/登记时都会先生成新的 QuivrFile（分配新的UUID），并记录sha1用于后续判重。
+                              # 目前没有在这里直接用 file_sha1 检查重复、跳过生成 QuivrFile，因为：
+                              # 1. QuivrFile 记录的是“本次业务层文件引用”或“上传记录”，需要每次都生成并持久化（比如同一内容被不同用户/会话上传）。
+                              # 2. file_sha1 主要用于存储层面判断“底层内容是否已存在”（比如 dedup 或软链接），具体判重逻辑应该在存储管理/业务去重阶段，而不是 load_qfile 这个入口函数里实现。
+                              # 3. “上传”动作可能还带有不同业务元数据、归属 brain_id、权限绑定，即使内容重复，也要新建引用，以支持多实例独立管理。
+                              # 通常会在 storage 层/processor 层增加基于 file_sha1 的内容去重加速，这一步不能直接省略 QuivrFile 生成，否则业务链路无法串联、权限难区分。
     )
 
 

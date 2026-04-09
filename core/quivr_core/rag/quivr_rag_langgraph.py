@@ -253,6 +253,20 @@ class IdempotentCompressor(BaseDocumentCompressor):
         return documents
 
 
+# ===================
+# QuivrQARAGLangGraph 这个类用来封装和协调 RAG（Retrieval Augmented Generation，检索增强生成）流程，结合了检索（Retriever）、重排序（Reranker）和大模型生成（LLM）等能力，是贯穿“资料召回-相关性排序-AI生成回答”完整链路的核心编排入口。
+# 
+# 作用总结：
+# - 统一持有检索配置(retrieval_config)、向量库(vector_store)、大模型(LLM)等关键组件。
+# - 负责实例化和选择不同的重排序器(reranker)，比如 Cohere Rerank，可以让检索结果经过大模型理解后再排序，提升检索+生成的相关性。
+# - 作为多步骤RAG推理编排的主流程入口，使外部例如Brain能够调用 answer_astream 或其它方法与底层RAG流程解耦。
+# 
+# 典型调用链举例：
+#     Brain（决策层） --> QuivrQARAGLangGraph（RAG流程层） --> Retriever/Reranker/LLM（检索与生成底层）
+# 
+# 设计意义：
+# - 让检索/排序/生成能力可以灵活互换、易于扩展、可插拔，方便不同场景下快速切换底层实现。
+# - 为后续支持更复杂的多工具长链路RAG（如LangGraph工作流）封装好流程入口，未来加功能也只需扩展这里的流程节点。
 class QuivrQARAGLangGraph:
     def __init__(
         self,
@@ -274,8 +288,14 @@ class QuivrQARAGLangGraph:
         self.vector_store = vector_store
         self.llm_endpoint = llm
 
-        self.graph = None
+        # 这里 self.graph 赋值为 None，目的是实现“懒加载”（lazy initialization）——也就是在对象创建时暂不构建 LangGraph 工作流，而是等到首次需要使用时（通常在 answer_astream 或 get_or_create_graph 等方法中）再真正初始化 self.graph。
+        # 这样做的好处是：有些 RAG 配置或依赖对象可能会在 __init__ 后续阶段（如热加载、外部配置等）才确定，提前实例化工作流反而会浪费资源或导致出错。因此这里用 None 作为占位，后续再根据需要补全 graph 实例。
+        # type: ignore[name-defined] 是为了静态检查友好，这里 LangGraph 只是类型注释，具体实现在 runtime 时构造。
+        self.graph = None  # type: ignore[name-defined]
 
+    # get_reranker 方法的作用是：根据当前的 reranker 配置（如 supplier、model、api_key 等），实例化并返回一个文档重排序器（Reranker）对象，例如 CohereRerank 或 JinaRerank。
+    # 这个重排序器会在 RAG 流程中，对初步检索出来的一批文档，利用大模型（或深度双塔/跨编码器）算法，按query与文档的“实际语义相关性”进行精细化排序，提升后续生成式AI回答的准确性和上下文匹配度。
+    # 典型作用场景是在“向量检索”结果不精准时，进一步用强模型比对 query 和每个 doc 的关联度，选出最贴合用户问题的那几条文档，最终送交LLM生成答案。
     def get_reranker(self, **kwargs):
         # Extract the reranker configuration from self
         config = self.retrieval_config.reranker_config
@@ -286,15 +306,60 @@ class QuivrQARAGLangGraph:
         top_n = kwargs.pop("top_n", config.top_n)
         api_key = kwargs.pop("api_key", config.api_key)
 
-        if supplier == DefaultRerankers.COHERE:
+        if supplier == DefaultRerankers.COHERE: # 提供语意重排序
+            # Cohere Rerank 实际上是用类似于 LLM 架构（Transformer 大模型）来做检索结果的语义重排序（cross-encoder），不是用 embedding 向量距离简单排，而是模型“读懂”了 query 与文档关系再打分。
+            # 算法流程如下：
+            #   1. 输入：召回的一组文档与1条用户query。
+            #   2. Cohere Rerank 内部用一个“跨编码器”大模型，把query和每个文档拼接，送入Transformer。
+            #   3. 模型（预训练自带）会像LLM理解问答语境那样，输出一个相关性分数（如0.93/0.44），代表该文档与query的结合程度。
+            #   4. 最后对所有召回文档，按这个分数降序重新排序，选分最高的前N。
+            # 举例：
+            #   - query: "什么叫图神经网络"
+            #   - 文档A: "图神经网络用于处理图结构数据，比如社交关系、化合物分析。"
+            #   - 文档B: "GAN是一种生成模型。"
+            #   - 文档C: "卷积神经网络擅长图像任务。"
+            #   Rerank输出（分数）：A 0.95, C 0.37, B 0.15
+            #   排序后：[A, C, B]
+            # 总结：
+            #   - 是“用大模型做精细比对，让模型主动理解query和文档谁更相关”，与传统“只比向量距离”完全不同，效果提升显著。
+            #   - 模型本身属于预训练大模型范畴，所以本质上确实是“借助了LLM进行重排序”，但它专门调优了排序能力，和一般生成式LLM（ChatGPT这类）不同，不是直接生成内容，而是专注于相关性打分排序。
             reranker = CohereRerank(
                 model=model, top_n=top_n, cohere_api_key=api_key, **kwargs
             )
         elif supplier == DefaultRerankers.JINA:
+            # JinaRerank 实现的也是基于深度神经网络的重排序（Rerank）算法，采用跨编码器（cross-encoder）结构，与 Cohere Rerank 类似，但有一些区别。
+            # Jina Reranker 的底层核心流程如下：
+            #   1. 输入：一组召回回来的文档 + 用户 query。
+            #   2. Jina 的重排序 API（如 jina-reranker-v2-base-en/zh）会将 query 和每个文档拼成对：
+            #       (query, doc1), (query, doc2), ...
+            #   3. 每对送进神经网络模型（如 Jina 训练的改进型 Transformer），模型“深度理解”query 与文档内容，评分每一组的相关性（通常为0~1的分数）。
+            #   4. 按分数降序排列文档，排序后的前 top_n 作为最终的高相关性检索结果。
+            # 具体例子：
+            #   - query: "中心极限定理的应用"
+            #   - docA: "中心极限定理广泛应用于金融风险建模与抽样分布分析。"
+            #   - docB: "大语言模型在NLP里非常流行。"
+            #   执行 Jina Rerank，得到分数：A 0.94, B 0.21
+            #   排序结果：[A, B]
+            #
+            # 【与 Cohere Rerank 的区别】
+            #   - 算法原理都采用 cross-encoder（大模型读query和文档后统一判别相关性），但底层模型权重和数据来源有差异：
+            #     - Cohere 的 Rerank 通常在英文或多语种全球主流数据集上训练，覆盖面广，适合国际化/英文本地化场景。
+            #     - Jina Rerank 有专门针对中文的版本（如 zh-v2），在中文语料/问答场景做过较多优化，适合纯中文/双语本地化场景，推理接口国内CDN极快。
+            #   - API 访问与授权方式略有不同，Jina 国内部署便利性更强、低延时，Cohere 在海外云端更易获得算力和可用性。
+            #   - 两者都支持RAG场景下的高相关性排序，但针对行业和语种细节，Jina 在中国区和中文提升更自然；Cohere 更均衡面向通用语种和国际业务。
+            #
+            # 【场景适用建议】
+            #   - 优先选 JinaRerank：你需要高性能中文重排序、本地快、国产模型合规，或者你的知识库问答对象大部分是中文。
+            #   - 优先选 CohereRerank：你的业务以英文/多语种为主，注重全球化/模型权重的稳定与通用性，对国内加速无极致要求。
             reranker = JinaRerank(
                 model=model, top_n=top_n, jina_api_key=api_key, **kwargs
             )
         else:
+            # IdempotentCompressor 和 Cohere/Jina Rerank 的区别：
+            # - CohereRerank/JinaRerank 都是 "跨编码器大模型" 方式进行真实的语义重排序，会读取 query-文档对理解其相关性，然后输出一个相关性分数，真正打乱原本的向量检索顺序，效果大幅提升。
+            # - IdempotentCompressor 并不是重排序 "Reranker" 算法，更像是一个“不改变顺序/不做语义判断”的压缩器（无操作或者pass-through占位实现），它不会分析 query 与 doc 的语义关系，也不重新打分，只是把原输入列表原样返回。
+            # - 适用场景一般为“未指定任何重排序算法时的兜底/占位”，确保整个RAG流程成立，但不会对输出顺序做任何优化。
+            # - 所以选用 IdempotentCompressor 并不能提升结果，只能保证没有重排序时流程不中断。
             reranker = IdempotentCompressor()
 
         return reranker

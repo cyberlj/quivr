@@ -237,6 +237,9 @@ class Brain:
         # 第 1 阶段：读取 Brain 的序列化配置。
         # `config.json` 里保存的是这个 Brain 的元信息、storage 配置、embedding 配置、向量库配置等。
         with open(os.path.join(folder_path, "config.json"), "r") as f:
+            # 是的，这行代码会把 config.json 文件中的 JSON 字符串“反序列化”为一个 BrainSerialized 对象实例（即 Pydantic 数据模型）。
+            # 再具体点：它会把磁盘文件里保存的配置信息（原本是 dict/JSON 结构）还原成可以属性访问和类型检查的对象（bserialized），
+            # 方便后面直接用 bserialized.xxx 读字段，而不是手动解析 json/dict。
             bserialized = BrainSerialized.model_validate_json(f.read())
 
         storage: StorageBase | None = None
@@ -251,12 +254,45 @@ class Brain:
 
         # 第 3 阶段：恢复 embedder。
         # 注意这里并不是重新做 embedding，而是恢复“以后查询时需要用的 embedding 工具”。
+        # 第 3 阶段：恢复 embedder
+        # 作用说明：
+        # - load 这里根据序列化数据还原出用于“文本转向量”的嵌入器（embedder）
+        # - 决定后续 RAG 检索时向量的生成方式，和原始语料无关，只影响未来“用户问题转向量”；保持和建库时 embedding 保持一致
+        # - 在RAG系统里，这层相当于“向量化标准层”，整个知识库的可检索性、可兼容性依赖于这里的实现
+        # 
+        # 关于可选项：
+        # - 当前代码只实现了 openai_embedding，因此只能用 OpenAIEmbeddings
+        # - 但设计上 embedder_type 字段用于后续支持更多 embedding 工具，如本地 Huggingface、国产模型、自研向量器等
+        # - 只需后续加 elif 分支即可支持更多 embedding 类
         if bserialized.embedding_config.embedder_type == "openai_embedding":
             from langchain_openai import OpenAIEmbeddings
-
             embedder = OpenAIEmbeddings(**bserialized.embedding_config.config)
+        # elif bserialized.embedding_config.embedder_type == "xxx":
+        #     # 支持更多本地/自研 embedding
+        #     from your_lib import YourEmbedding
+        #     embedder = YourEmbedding(**bserialized.embedding_config.config)
         else:
-            raise ValueError("unknown embedder")
+            raise ValueError("unknown embedder: 当前仅支持 openai_embedding，可扩展更多 embedding 实现")
+
+        # ================== 教学补充 ==================
+        # OpenAIEmbeddings优缺点对比：
+        # 优点：
+        #   - 性能好：API 官方部署，速度快，可靠性高
+        #   - 质量高：覆盖大部分主流语种，对英语检索效果优异，有多模型可选
+        #   - 无需本地部署：直接调用云 API，节省机器、维护、人力成本
+        #   - 生态好：主流 vector DB、RAG 框架都有原生集成
+        # 缺点：
+        #   - 成本高：API 计费（按 token/调用量），大规模接入费用可观
+        #   - 受限于外网/合规：出海和敏感业务可能不适用，数据出云有泄露风险
+        #   - 定制性弱：无法针对私域语料做微调/custom embedding
+        #   - QPS有限制：API易受限速、网络波动影响高并发可用性
+        #   - 隐私顾虑：有些行业（金融、医疗等）不愿明文调云端 embedding
+        #
+        # 实际生产使用哪种？
+        # - 创业/原型期、海外业务、小团队常选第三方 OpenAI/百度/阿里等 Embedder 成品，省心无维护压力
+        # - 数据合规/隐私、海量大库、特定领域效果追求、高吞吐等场景，大中型公司更倾向于自研或本地化 embedding（Huggingface模型、国产模型等），
+        #   可以微调/自控数据，且成本可控、适配业务需要
+        # - 典型解决方案是：小量快速用第三方 embedding，大规模/私有化时换本地 embedding，两者用统一接口封装
 
         # 第 4 阶段：恢复向量库。
         # 这里真正恢复的是“已经建好的知识库索引”，
@@ -267,6 +303,9 @@ class Brain:
             vector_db = FAISS.load_local(
                 folder_path=bserialized.vectordb_config.vectordb_folder_path,
                 embeddings=embedder,
+                # allow_dangerous_deserialization=True 表示允许在加载 FAISS 本地 vectorstore 时，使用 pickle 反序列化（强制解包内部对象）
+                # 这样做会提升兼容性，但带来一定安全风险——只建议加载可信来源的索引
+                # 如果设为 False，则更安全，但一旦保存的 faiss 索引对象中包含复杂自定义对象（如自定义嵌入器等）会导致加载失败
                 allow_dangerous_deserialization=True,
             )
         else:
@@ -786,6 +825,20 @@ class Brain:
         chat_history: ChatHistory | None = None,
         **input_kwargs,
     ) -> AsyncGenerator[ParsedRAGChunkResponse, ParsedRAGChunkResponse]:
+    # 为什么要设置 rag_pipeline:
+        # 外部可以通过 rag_pipeline 显式指定本次问答要用哪种 RAG 工作流管道——
+        # 常见的是 QuivrQARAG（经典链路版），和 QuivrQARAGLangGraph（LangGraph 场景增强版）。
+        # 这样做的意义：
+        # - 便于开发和测试时灵活切换工作流内核，支持 A/B、对比实验、不同推理编排
+        # - 支持未来扩展更多 RAG Engine，只需实现接口即可插拔
+        #
+        # 两者区别与优缺点示例：
+        # - QuivrQARAG: 传统“顺序检索-生成”管道，实现简单、调试方便、适合线性问答与基础文件知识库
+        #   优点：弹性强，接口直观，上手快
+        #   缺点：无法描述复杂多分支流程/多轮流转
+        # - QuivrQARAGLangGraph: 基于 langgraph，可描述多分支、条件节点、复杂控制流，更适合流程自定义、异步多阶段、甚至流程内嵌插件
+        #   优点：支持复杂编排、扩展性极强、适合企业自定义流程和插件嵌套
+        #   缺点：学习曲线较高、设计成本略大
         """
         Ask a question to the brain and get a streamed generated answer.
         Args:
@@ -851,6 +904,10 @@ class Brain:
         #
         # 所以这里的角色很像“接线员”：
         # Brain 负责把依赖和输入拼好，真正干活的是下游工作流引擎。
+        # 注意：这里直接指定使用 QuivrQARAGLangGraph 作为 RAG 工作流引擎。
+        # 虽然 quivr_core/rag/pipeline.py 里定义了 QuivrQARAG（基础经典 RAG 工作流）和 QuivrQARAGLangGraph（支持多 Agent/多工具的 LangGraph 扩展版本）两种选择，
+        # 但当前 Brain 默认只启动更强大的 QuivrQARAGLangGraph（表征“多智能体+工具流编排”），属于“下一代 RAG Pipline”。
+        # 如果后续需要兼容经典纯 RAG 工作流或做老版本 fallback，可以加条件动态选择。
         rag_instance = QuivrQARAGLangGraph(
             retrieval_config=retrieval_config, llm=llm, vector_store=self.vector_db
         )

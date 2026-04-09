@@ -36,6 +36,12 @@ class LocalStorage(StorageBase):
     def __init__(self, dir_path: Path | None = None, copy_flag: bool = True):
         self.files: list[QuivrFile] = []
         self.hashes: Set[str] = set()
+        # copy_flag 用于控制上传文件时，是选择将文件内容复制一份到指定存储目录（True），
+        # 还是只在存储目录创建指向原路径的符号链接（False）。
+        # 实际生产中，通常推荐使用 True，也就是复制文件：
+        # - 优点：文件物理独立保存，避免用户删除/移动原文件导致丢失，安全性和可控性更高
+        # - 缺点：磁盘多占一份空间，IO 会略增加
+        # 仅对安全、隔离要求不高但追求速度或空间极致优化的场景，才考虑用 False（如本地开发临时测试、磁盘空间极度有限时）。
         self.copy_flag = copy_flag
 
         if dir_path is None:
@@ -77,10 +83,21 @@ class LocalStorage(StorageBase):
             self.dir_path, str(file.brain_id), f"{file.id}{file.file_extension}"
         )
 
+        # 这里没有用向量数据库存储文件 hash，而是用本地内存 self.hashes 做判重，原因如下：
+        # 1. Storage 层只负责“原始文件的本地登记与去重”，它管理的是文件元数据（hash/路径/归属等），不是知识块向量，不需复杂持久化。
+        # 2. 本地集合集合法查重小文件高效、实现简单，只要单机生命周期内数据一致即可，满足大部分中小型用例（如数万量级）。
+        # 3. 确实，如你所说，如果“单机内存判重”遇到百万级别甚至千万级别文档时，hash 索引会变大，查找和存取延迟也会上升——此时建议：
+        #    - 如果需要横向扩展/冷启动恢复，可以将 hash 持久化存储（如 SQLite/RocksDB/Redis）。
+        #    - 若量大分布式共享，可选像向量库或专门的 KV/Set 存储分担元数据唯一性检查。
+        #    - 小而快的内存索引依然适合 ingestion 的“热路径”，持久化和分布式判重属于对海量数据“降级设计”。
+        #    - 真正的知识库内容是落在向量数据库，原始文件判重仅在 ingestion 入口做一层轻量保护，不影响下游问答与检索逻辑。
         if file.file_sha1 in self.hashes and not exists_ok:
             raise FileExistsError(f"file {file.original_filename} already uploaded")
 
         if self.copy_flag:
+            # 复制文件内容到本地存储指定目录
+            # file.path：用户上传文件的原始路径，通常是临时文件或外部输入
+            # dst_path：平台为每个文件生成的归档路径，形如 {self.dir_path}/{brain_id}/{file_id}{file_extension}
             shutil.copy2(file.path, dst_path)
         else:
             os.symlink(file.path, dst_path)
@@ -110,8 +127,13 @@ class LocalStorage(StorageBase):
         Raises:
             NotImplementedError: Always raises this error as the method is not yet implemented.
         """
+        
         raise NotImplementedError
 
+    # storage_path 在项目里表示本地存储目录的“根路径”——也就是所有文件都归档在哪个主目录下。
+    # 例如，storage_path 可能是 "data/brains/xxx"，本地存储会在这个目录下按 brain_id、file_id 分类保存所有入库文件。
+    # LocalStorage 的 load 函数会用 config.storage_path 初始化本地存储对象，
+    # 并把序列化的文件清单反序列化，恢复成内存中的 QuivrFile 列表，保证同一次脑袋启动时能拿到所有已归档的文件元数据。
     @classmethod
     def load(cls, config: LocalStorageConfig) -> Self:
         """
@@ -127,6 +149,9 @@ class LocalStorage(StorageBase):
             LocalStorage: An instance of `LocalStorage` with files loaded
                           from the configuration.
         """
+        # 这行代码的作用是：用配置对象 config 里的存储路径 storage_path 创建一个本地存储实例 tstorage。
+        # 例如，如果 config.storage_path 是 "data/brains/xxx"，函数会执行 tstorage = LocalStorage(dir_path="data/brains/xxx")。
+        # 最终结果就是 tstorage 变成管理指定本地文件夹的 LocalStorage 对象，后面可以把文件登记进这个目录。
         tstorage = cls(dir_path=config.storage_path)
         tstorage.files = [QuivrFile.deserialize(f) for f in config.files.values()]
         return tstorage

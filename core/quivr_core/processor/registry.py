@@ -268,6 +268,7 @@ def get_processor_class(file_extension: FileExtension | str) -> Type[ProcessorBa
     # - 支持大量“未主动导入”的候选 processor，只有用到时才动态 import & register，兼容插件、扩展、动态分发
     # - 依赖静态表供自动 fallback，不会因未注册而直接断链
     
+    # registry: dict[str, Type[ProcessorBase]] 仅可读
     if file_extension not in registry:
         # Step 1: 如果连静态 known_processors 都没有映射，说明完全不支持该扩展名，直接报错
         if file_extension not in known_processors:
@@ -292,7 +293,7 @@ def get_processor_class(file_extension: FileExtension | str) -> Type[ProcessorBa
     return cls
 
 
- """
+    """
     注册（或追加）一个新的文件处理器（processor）。
 
     这个方法实现了 processor 的动态注册表管理，允许在运行期为指定文件扩展名增加或覆盖处理器逻辑。
@@ -338,7 +339,8 @@ def register_processor(
     override: bool = False,
     errtxt: str | None = None,
     priority: int | None = None,
-):
+):  
+    # 不在register而在known_processor, 则pop一个processor
     if isinstance(proc_cls, str):
         if file_ext in known_processors and append is False:
             if all(proc_cls != proc.cls_mod for proc in known_processors[file_ext]):

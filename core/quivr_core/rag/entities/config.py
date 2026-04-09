@@ -52,6 +52,23 @@ class DefaultWebSearchTool(str, Enum):
     TAVILY = "tavily"
 
 
+# DefaultRerankers 枚举类
+# -------------------------------------------
+# 作用：在 RAG 检索增强生成系统（RAG: Retrieval-Augmented Generation）中，DefaultRerankers 是内置重排序器（reranker）供应商的枚举（Enum）。
+# 它用来规范和管理可以调用的“语义重排序服务”类型，便于后续统一配置和调用。例如检索后拿到 40 个 chunk，常常要用更智能的 reranker（不是简单 embedding 距离）做二次相关性排序。
+#
+# 枚举中的两个值分别如下：
+# - COHERE：对应 Cohere 公司提供的语义重排序 API。Cohere 是加拿大一家专注于 NLP 的人工智能公司，其 rerank API 广泛应用于向量检索、文档排序、结构化知识检索等工业用例，支持多语言大模型服务。
+# - JINA：对应 Jina AI 公司旗下的重排序服务（如 jina-reranker-v2-base-multilingual）。Jina AI 在开源和商业向量检索领域有较多实用解决方案，特别聚焦于多模态、神经向量数据库和下游 ranking。
+#
+# 在 rag 系统的作用：
+# - 这个枚举配合 RerankerConfig 配置，允许开发者直接指定用哪个主流重量级 reranking 工具，避免自由拼写带来的风险。
+# - 能帮助系统（如 UI、API、自动推荐等）枚举所有支持的 reranker 类型，并通过 default_model 属性直接拿到推荐的主力模型。
+# - 让向量检索后的二次 re-ranking 选择更加结构化，方便扩展、切换及参数检查。
+#
+# 举例（伪代码）：
+#   reranker_config = RerankerConfig(supplier=DefaultRerankers.COHERE)  # 会默认选择 Cohere 推荐的 rerank-v3.5 模型
+#   print(DefaultRerankers.JINA.default_model)  # 输出："jina-reranker-v2-base-multilingual"
 class DefaultRerankers(str, Enum):
     COHERE = "cohere"
     JINA = "jina"
@@ -561,9 +578,39 @@ class WorkflowConfig(QuivrBaseConfig):
         self.validate_available_tools()
 
     def check_first_node_is_start(self):
+        # 为什么应该是 SpecialEdges.start？
+        # 在 RAG 工作流配置中，节点（nodes）描述了问题处理经过的步骤和流向。
+        # 工作流需要有明确的起点，以保证每次流程都是从“入口节点”有序开始：
+        # - START 节点标志流程的起始，后续所有工具、节点执行顺序都依赖这个有序流动。
+        # - 如果第一个节点不是 START，整个流程框架可能无法连接所有后续节点，存在无效配置或异常跳转。
+        # - 即：“流程必须有唯一/显式的入口点。”
         if self.nodes and self.nodes[0].name != START:
+            # 如果工作流配置的第一个节点不是 START，抛异常 warn 配置错误
             raise ValueError(f"The first node should be a {SpecialEdges.start} node")
 
+    # ======================================
+    # RAG 系统 workflow 中 node 的典型量级和不同场景说明
+    #
+    # - 通常每个 RAG 工作流只包含 4~8 个 nodes（节点），覆盖从输入、预处理、检索到生成等基本处理流程。
+    # - 实际 node 总数与流程复杂度高度相关：
+    #   - 标准“问题→检索→生成”流程，节点一般有 START、filter_history、rewrite、retrieve、generate_rag、END 共 5~6 个，属于经典 minimum RAG pipeline。
+    #   - 如果有多模型召回、多步推理、插入 rerank/聚合环节，节点可能增至 8~15 个（如检索规则、聚合复杂度、上下文增强、调用外部工具等）。
+    #   - 企业级场景/链式多 RAG 可能一个 workflow 有十几二十个 nodes，把语音识别、结构化抽取、多文档裁剪等都串进来。
+    # - 通常一个 node 承担一个语义步骤，如 rewrite 输入、筛选历史、调检索、上下文聚合、最终生成，每步细分都可设计一个 node。
+    # - 对于交互简洁的问答机器人，nodes 量级控制在 5~10 最易管理、易观测和 debug。
+    # - 工具类/插件流式场景，可能某些 node 负责 tool-invoke、function-call 或包裹外部 API。
+    # - RAG 全链路流程推荐每个 node 做到单一职责、可插拔，进阶场景支持 workflow 动态配置和扩展。
+    #
+    # 下面是获取指定节点 tools（工具插件）的代码接口。
+    
+    # quivr 当前最小原生 workflow（参见 DefaultWorkflow.RAG.nodes）里，一共定义了 5 个 node：
+    # - START
+    # - filter_history
+    # - rewrite
+    # - retrieve
+    # - generate_rag
+    #   终止节点为 END，但 END 不单独实例化 node（只是 edges 跳转终点，不参与 tools 分配）。
+    # 如需复用可变流程，实际 node 数会随 workflow 配置增长，但默认最小主链路为 5 个步骤。
     def get_node_tools(self, node_name: str) -> List[Any]:
         """Get tools for a specific node."""
         for node in self.nodes:
@@ -571,6 +618,44 @@ class WorkflowConfig(QuivrBaseConfig):
                 return node.instantiated_tools
         return []
 
+
+    # validate_available_tools 的逻辑：
+    # - 负责检测 workflow/workflow_config/assistant_config 里声明的 available_tools 字段里每个工具名是否在系统已支持的工具白名单内。
+    # - 校验通过则自动将工具对象实例化 append 到 self.validated_tools，为下游 RAG 执行流直接引用。
+    # - 校验不通过时，报错并给出拼写建议，避免写错工具名“静默失效”。
+    #
+    # 为什么需要 validate?
+    # - RAG 流程允许用户灵活配置“这轮推理能用哪些工具”，但必须保证这些工具确实已在当前后端注册。
+    # - 如果没有提前 validate，流程执行时一旦引用了不存在工具，会导致难以定位的错误或运行期崩溃。
+    # - 通过集中统一校验，把所有合法性错误提前暴露、强约束，提升体验。
+    #
+    # quivr 项目内内置的工具（tool）有哪些？
+    # -----【下面是目前 quivr 默认内置与支持的 tool 类型说明】-----
+    # 工具是 RAG 流程节点可以动态调用的“外部智能插件”，用于支撑特定功能如搜索、内容生成、数据处理等。
+    # 主要类别有（依赖 TOOLS_CATEGORIES 和 TOOLS_LISTS 注册表，详见 llm_tools 源码）：
+    #
+    # 1. TOOLS_CATEGORIES 里的工具（按大类分组）：
+    #    - "web_search"      网络检索型工具（例：实时查网页、Bing/Web接口）
+    #    - "calculator"      算法/计算器（例：复杂数学计算）
+    #    - "summarizer"      内容摘要与压缩
+    #    - "python"          代码执行
+    #    - "file_read"       文件读入/解析
+    #    - ...（可能持续增加，依据 quivr_core/llm_tools/ 目录注册的合集）
+    #
+    # 2. TOOLS_LISTS 里的工具（每类下的具体实现名）：
+    #    - 如 web_search 下包含 "tavily", "serpapi" 等具体接口工具名
+    #    - "calculator" 下包含基础 calculator、复杂 math 等
+    #    - 其它如 "text_qa"，"summary" 等。
+    #
+    # 3. 用户自定义或扩展工具
+    #    - 用户可以自定义 LLMSkill/Tool 实现，注册到 TOOLS_LISTS。
+    #    - 只要在工具注册表声明，validate 就能识别。
+    #
+    # tools 配置举例:
+    #   available_tools = ["web_search", "tavily", "calculator", "summarizer"]
+    # 
+    #   其中既可以填大类名（由系统自动分配同类内所有实现），也可以按需点名具体类别或某个专用子工具。
+    #
     def validate_available_tools(self):
         if self.available_tools:
             valid_tools = list(TOOLS_CATEGORIES.keys()) + list(TOOLS_LISTS.keys())
@@ -594,6 +679,16 @@ class WorkflowConfig(QuivrBaseConfig):
 
 
 class RetrievalConfig(QuivrBaseConfig):
+    """
+    RetrievalConfig 负责配置 RAG 检索阶段的整体行为，包括召回参数、历史窗口、文件数等。
+
+    参数说明：
+    - max_history: 历史对话窗口的最大轮数，决定问答时携带多少轮上下文给模型参与检索（影响多轮对话时上下文保留的深度）。
+    - max_files: 检索场景下，允许纳入检索范围的最大文件数（例如当上传多个文档时，检索操作会限定只在前N个文件中召回）。
+    - k: 控制向量召回时返回的 chunk 数量。实际 RAG 检索时，向量数据库会返回与输入 query 最近的前k个文本片段（chunk），这些 chunk 作为检索环节的主要输入，也就是 RAG“读进来多少知识”的软上限。
+
+    这些参数协同决定了：RAG 检索时能引用的历史范围、可以用到的文件上限，以及每次检索端返回给 llm 的 chunk 数量。增大这些参数通常能提升召回范围，但也可能带来响应变慢、召回不精等副作用。
+    """
     reranker_config: RerankerConfig = RerankerConfig()
     llm_config: LLMEndpointConfig = LLMEndpointConfig()
     max_history: int = 10
