@@ -71,6 +71,8 @@ Every round plan must include:
 - `success_rule`
 - `reset_rule`
 - `novelty_check`
+- `candidate_family`
+- `direction`
 - `expected_risk`
 
 If any field is missing, the round may not enter execution.
@@ -91,6 +93,12 @@ The review must answer:
 - is keep or reset decidable from the planned evidence
 - does this repeat a recently failed idea
 - is this candidate worth doing now
+
+The review must compare the round plan against:
+
+- `candidate-registry.tsv`
+- `experiment-ledger.tsv`
+- `reflection-log.md`
 
 Allowed review outcomes:
 
@@ -126,6 +134,8 @@ The system must return to planning if:
 - the same direction failed 3 times
 - benchmark validity becomes noisy twice in a row
 - the active strategic plan no longer matches the best available evidence
+
+If there are no valid candidates left, the system must not loop on re-plan. It must enter `candidate_pool_empty` or `await_human`.
 
 ## Memory rule
 

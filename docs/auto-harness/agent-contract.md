@@ -23,6 +23,8 @@ Responsibilities:
 Inputs:
 
 - `active-plan.md`
+- `runtime-state.md`
+- `candidate-registry.tsv`
 - `round-plan.md`
 - `plan-review.md`
 - `experiment-ledger.tsv`
@@ -143,6 +145,8 @@ Outputs:
 Primary ownership by role:
 
 - `active-plan.md` -> Conductor
+- `runtime-state.md` -> Conductor
+- `candidate-registry.tsv` -> Conductor
 - `round-plan.md` -> Planner
 - `plan-review.md` -> Plan Reviewer
 - code under `core/` -> Worker
@@ -158,6 +162,13 @@ Agents do not hand off by chat summary alone.
 Required handoff surfaces are repository files and structured command output.
 
 If a handoff is not written down, the next role should treat it as unreliable.
+
+The default execution topology is:
+
+- planning and ledger updates in the control worktree
+- code changes in per-round execution worktrees
+
+See `worktree-strategy.md`.
 
 ## Minimum runtime topology
 

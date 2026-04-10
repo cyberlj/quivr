@@ -61,3 +61,33 @@ This file records stable design decisions for the Phase 1 auto harness.
 - Decision: Candidate pool uses layered priority with performance first and `P0`/`P1` TODOs second.
 - Why: This protects the loop from drifting toward easy but low-value keeps.
 - Alternatives rejected: one mixed pool for all work items.
+
+## D-011
+
+- Decision: `current_best_commit` must live in a repository state file, not only in conductor memory.
+- Why: Keep and reset depend on a durable anchor that survives restarts and handoffs.
+- Alternatives rejected: implicit state held by the active conductor.
+
+## D-012
+
+- Decision: Candidate tracking requires a dedicated registry with `candidate_family` and `direction`.
+- Why: Novelty checks and repeated-failure detection need structured history.
+- Alternatives rejected: deriving candidate identity from free-text notes alone.
+
+## D-013
+
+- Decision: The loop must support terminal and waiting states such as `candidate_pool_empty`, `blocked`, and `await_human`.
+- Why: A harness should stop consciously when there is no valid work instead of re-planning forever.
+- Alternatives rejected: endless planner-review-replan churn.
+
+## D-014
+
+- Decision: Multi-agent code execution uses one dedicated execution worktree per round, while planning and ledger state stay in the control worktree.
+- Why: This isolates code changes, keeps reset cheap, and protects shared planning state.
+- Alternatives rejected: making all agents share one dirty worktree.
+
+## D-015
+
+- Decision: The repository needs a local `AGENTS.md` and fixed role prompts.
+- Why: Agents need an in-repo router, write-back rules, and stable role identity.
+- Alternatives rejected: relying only on external conversation context or host-level instructions.

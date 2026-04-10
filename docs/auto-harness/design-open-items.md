@@ -35,6 +35,11 @@ Whenever one item is resolved:
 | D11 | Escalation policy | Need explicit rules for when execution must stop and report to the human. | decided | Refine with concrete execution commands later. | Owned by `OPERATING_MODEL.md`. Start gate and escalation cases are now defined. | 2026-04-10 |
 | D12 | Phase completion criteria | Need a hard rule for when phase 1 harness is considered operational. | decided | Use these criteria to gate the first execution launch. | Owned by `OPERATING_MODEL.md`. Completion criteria are now defined. | 2026-04-10 |
 | D13 | Two-layer planning and plan review | The loop needs a plan per round and an independent plan review step to avoid self-approval and drift. | decided | Use the planning model to guide future implementation. | Owned by `planning-model.md`. Strategic plan, round plan, plan review, and the revised loop are now defined. | 2026-04-10 |
+| D14 | Durable current-best state | Keep and reset require a durable state file for `current_best_commit`. | decided | Use the runtime state file during implementation. | Owned by `runtime-state.md`. The baseline anchor is now repository state, not agent memory. | 2026-04-10 |
+| D15 | Candidate registry | Candidate discovery and novelty checks require a structured registry. | decided | Use the registry during implementation. | Owned by `candidate-registry.tsv` and `OPERATING_MODEL.md`. Candidate identity and direction are now structured. | 2026-04-10 |
+| D16 | Terminal loop states | The loop needs explicit empty, blocked, and human-wait states. | decided | Reflect these states in the runtime controller. | Owned by `runtime-state.md` and `OPERATING_MODEL.md`. Non-progress states are now explicit. | 2026-04-10 |
+| D17 | Worktree execution model | Multi-agent execution needs a deterministic isolation model. | decided | Implement the worktree flow with the runtime controller. | Owned by `worktree-strategy.md`. Planning stays in the control worktree, code changes run in per-round worktrees. | 2026-04-10 |
+| D18 | Repo-local agent router and role prompts | Agents need local routing, write-back duties, and fixed role prompts. | decided | Use these files as startup context during implementation. | Owned by `AGENTS.md` and `agent-prompts.md`. | 2026-04-10 |
 
 ## Notes
 

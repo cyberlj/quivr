@@ -114,11 +114,17 @@ TODO candidates may come from:
 Every candidate must be recorded with:
 
 - `candidate_id`
+- `candidate_family`
+- `direction`
 - `type`
 - `source`
 - `target_path`
 - `evidence`
 - `verification`
+
+These records live in:
+
+- `docs/auto-harness/candidate-registry.tsv`
 
 ## Round loop
 
@@ -145,10 +151,13 @@ The system recognizes one code baseline as `current_best_commit`.
 
 Rules:
 
+- `current_best_commit` must be written to `runtime-state.md`
 - each round starts from `current_best_commit`
 - failed rounds reset code back to `current_best_commit`
 - only successful rounds may advance `current_best_commit`
 - research logs are never reset with code
+
+`current_best_commit` is repository state, not conductor memory.
 
 ## Re-plan thresholds
 
@@ -158,6 +167,8 @@ The loop must stop and re-plan when any of these thresholds are reached:
 - 5 total failures without a keep
 - 2 consecutive inconclusive or noisy benchmark results
 - 2 consecutive TODO keeps, after which the next round must return to performance work
+
+These thresholds must be computed from structured ledger fields, not free-text notes.
 
 ## Noise handling
 
@@ -180,6 +191,14 @@ Before the first live autonomous execution, the system must notify the human.
 
 Once execution is approved, the loop should continue until manually interrupted, except for explicit escalation cases.
 
+The loop also has terminal or waiting states:
+
+- `candidate_pool_empty`
+- `blocked`
+- `await_human`
+
+If there is no valid candidate to execute, the loop must enter one of these states instead of re-planning forever.
+
 ## Escalation cases
 
 Execution must stop and report to the human if:
@@ -187,6 +206,8 @@ Execution must stop and report to the human if:
 - the first live run is about to start
 - 5 rounds fail without a keep
 - benchmark validity collapses for 2 rounds in a row
+- the candidate pool is empty
+- the loop is blocked on missing information or missing assets
 - the mutable surface must expand
 - new dependencies are required
 - public API or root documentation must change
