@@ -1,0 +1,1 @@
+round_id	candidate_id	round_type	start_commit	end_commit	tests_passed	quality_guard_passed	benchmark_status	baseline_full_session_p50_ms	new_full_session_p50_ms	baseline_session_p90_ms	new_session_p90_ms	gate	gain	decision	notes
