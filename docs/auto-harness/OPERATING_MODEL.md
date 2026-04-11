@@ -42,6 +42,10 @@ Each round is evaluated by:
 
 `VSG = Gate x Gain`
 
+The keep or reset decision must be produced by a fixed evaluator script.
+
+The conductor must not compute `Gate` or `Gain` from scattered logs by ad hoc reasoning once the evaluator exists. It must read the evaluator's structured output.
+
 ### Gate
 
 `Gate` is either `0` or `1`.
@@ -90,6 +94,20 @@ They do not redefine the Phase 1 baseline by themselves.
 - `Gate = 1` and `Gain > 0` -> `keep`
 - `Gate = 1`, `Gain > 0`, but `session_p90_ms` regresses beyond the guard threshold -> `needs_review`, not an automatic keep
 - `Gate = 1`, `Gain > 0`, but shadow E2E reports degraded compatibility or suspicious divergence -> `needs_review`, not an automatic keep
+
+The evaluator script must return a structured decision with at least:
+
+- `gate`
+- `gain`
+- `decision`
+- `reason`
+- `needs_review`
+
+Decision values:
+
+- `keep`
+- `reset`
+- `needs_review`
 
 ## Candidate classes
 
@@ -180,7 +198,7 @@ Each round must follow this control loop:
 4. snapshot the current best state
 5. make the code change
 6. verify tests, quality, and benchmark
-7. score the round
+7. run the VSG evaluator
 8. keep or reset
 9. write reflection
 10. continue or trigger re-plan
@@ -188,6 +206,8 @@ Each round must follow this control loop:
 One round may pursue one hypothesis only.
 
 No round may enter code change without an approved plan review.
+
+No round may be kept or reset without an evaluator result.
 
 ## Current-best state
 

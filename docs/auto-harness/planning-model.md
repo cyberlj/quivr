@@ -47,6 +47,7 @@ It answers:
 - what success means
 - what reset means
 - what evidence would invalidate the idea
+- which evaluator command will decide keep or reset
 
 Repository file:
 
@@ -68,6 +69,7 @@ Every round plan must include:
 - `tests`
 - `quality_guard`
 - `benchmark`
+- `vsg_evaluator`
 - `success_rule`
 - `reset_rule`
 - `novelty_check`
