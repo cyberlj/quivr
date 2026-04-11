@@ -140,6 +140,70 @@ Outputs:
 - reflection entry
 - re-plan recommendation
 
+### Recorder
+
+Responsibilities:
+
+- write normalized structured loop facts handed off by other roles
+- append events
+- append tool usage summaries
+- append API interaction summaries
+
+Inputs:
+
+- runtime transitions from the conductor
+- tool result summaries from execution roles
+- API result summaries from the verifier
+
+Outputs:
+
+- `event-log.jsonl`
+- `tool-log.jsonl`
+- `api-log.jsonl`
+
+Recorder does not own `runtime-state.md`, does not interpret trends, and does not decide whether execution should stop.
+
+### Observer
+
+Responsibilities:
+
+- read recorded logs and round artifacts
+- summarize health and trend signals
+- surface alert-worthy states
+
+Inputs:
+
+- `runtime-state.md`
+- `event-log.jsonl`
+- `tool-log.jsonl`
+- `api-log.jsonl`
+- `experiment-ledger.tsv`
+- round archives
+
+Outputs:
+
+- `observer-summary.md`
+- alert events
+
+Observer does not edit business code or override the conductor.
+
+### Dashboard
+
+Responsibilities:
+
+- present read-only views of current state, recent history, and health signals
+
+Inputs:
+
+- `runtime-state.md`
+- `event-log.jsonl`
+- `experiment-ledger.tsv`
+- `observer-summary.md`
+
+Outputs:
+
+- read-only views only
+
 ## File ownership
 
 Primary ownership by role:
@@ -152,6 +216,10 @@ Primary ownership by role:
 - code under `core/` -> Worker
 - benchmark and validation output -> Verifier
 - reflection log -> Reflector
+- `event-log.jsonl` -> Recorder
+- `tool-log.jsonl` -> Recorder
+- `api-log.jsonl` -> Recorder
+- `observer-summary.md` -> Observer
 
 Conductor integrates the final decision into the shared ledger.
 
@@ -180,6 +248,9 @@ Phase 1 minimum topology:
 - 1 Worker
 - 1 Verifier
 - 1 Reflector
+- 1 Recorder
+- 1 Observer
+- 0 or 1 Dashboard
 
 Some roles may run sequentially in the same session at first, but their responsibilities remain distinct.
 
@@ -190,3 +261,8 @@ Some roles may run sequentially in the same session at first, but their responsi
 - Verifier cannot overrule the quality gate
 - Conductor cannot skip plan review
 - Reflector cannot erase failed-round history
+- Recorder cannot create a competing source of loop state
+- Recorder must not log observation-maintenance actions recursively
+- Recorder cannot reinterpret raw facts as strategy
+- Observer cannot rewrite recorded facts
+- Dashboard remains read-only

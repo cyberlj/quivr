@@ -46,9 +46,9 @@ This file records stable design decisions for the Phase 1 auto harness.
 
 ## D-008
 
-- Decision: The application-level benchmark uses the real configured Kimi path for `Gain`, while quality gating remains deterministic.
-- Why: Performance should reflect the real user path, but the hard quality gate must stay reproducible.
-- Alternatives rejected: purely local benchmark as the primary signal, or LLM judge as the Phase 1 hard gate.
+- Decision: Phase 1 uses a fixed application-owned primary gain benchmark for `Gain`, while the real configured Kimi path runs as a shadow E2E benchmark.
+- Why: The keep or reset loop needs a stable baseline that does not drift with upstream provider upgrades, rate limits, or scheduling noise. The real Kimi path is still important, but as a compatibility and observation layer, not as the sole score anchor.
+- Alternatives rejected: using the active Kimi path as the only primary gain signal, or dropping the real Kimi path entirely.
 
 ## D-009
 
@@ -91,3 +91,27 @@ This file records stable design decisions for the Phase 1 auto harness.
 - Decision: The repository needs a local `AGENTS.md` and fixed role prompts.
 - Why: Agents need an in-repo router, write-back rules, and stable role identity.
 - Alternatives rejected: relying only on external conversation context or host-level instructions.
+
+## D-016
+
+- Decision: Shadow E2E benchmark instability does not automatically zero out performance `Gain`.
+- Why: External provider drift should not masquerade as a code regression in the core keep or reset loop.
+- Alternatives rejected: binding the Phase 1 reset decision directly to every shadow E2E fluctuation.
+
+## D-017
+
+- Decision: `runtime-state.md` uses `loop_status` as the single waiting-state source of truth, with `human_wait_reason` only as an explanatory field.
+- Why: Parallel waiting flags create contradictory controller and observer reads.
+- Alternatives rejected: keeping both `await_human` and `awaiting_human` as independent state signals.
+
+## D-018
+
+- Decision: Recorder does not own loop state and must not recursively log its own observation-maintenance actions.
+- Why: Observation should describe the harness, not create a self-expanding meta-log.
+- Alternatives rejected: letting Recorder co-own `runtime-state.md` or logging every logging write.
+
+## D-019
+
+- Decision: Candidate selection requires an explicit lifecycle with constrained status values.
+- Why: `candidate_pool_empty`, novelty checks, and repeated-failure controls need mechanical candidate validity rules.
+- Alternatives rejected: leaving candidate validity implicit in free-text notes.

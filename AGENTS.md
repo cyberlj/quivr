@@ -11,6 +11,8 @@ Every agent working in this repository must read, in order:
 3. `docs/auto-harness/agent-contract.md`
 4. `docs/auto-harness/runtime-state.md`
 5. `docs/auto-harness/active-plan.md`
+6. `docs/auto-harness/observation-model.md`
+7. `docs/auto-harness/event-schema.md`
 
 Then read only the specific role files and target code needed for the assigned task.
 
@@ -36,6 +38,14 @@ Agents must write back new durable information to the repository when it appears
 - update `reflection-log.md` after keep or reset
 - update `decision-log.md` when a stable rule changes
 - update `design-open-items.md` when a new design gap is discovered
+- append `event-log.jsonl` for major loop events
+- append `tool-log.jsonl` for structured tool usage summaries
+- append `api-log.jsonl` for external API interaction summaries
+- update `observer-summary.md` when the observer runs
+
+`runtime-state.md` is owned by the Conductor only.
+
+Observation-maintenance writes must not recursively log themselves.
 
 ## Environment facts
 
@@ -53,6 +63,7 @@ Examples:
 - Conductor planning files live in the control worktree.
 - Execution agents use dedicated per-round worktrees.
 - A keep may only be integrated back through the documented worktree flow.
+- Observation files are written in the control worktree only.
 
 See `docs/auto-harness/worktree-strategy.md` for the execution model.
 
@@ -61,3 +72,13 @@ See `docs/auto-harness/worktree-strategy.md` for the execution model.
 Role-specific identity prompts live in:
 
 - `docs/auto-harness/agent-prompts.md`
+
+## Observation layer
+
+Observation roles do not control strategy.
+
+- `Recorder` normalizes facts handed off by primary loop roles
+- `Observer` summarizes and alerts
+- `Dashboard` stays read-only
+
+No observation role may edit business code or decide keep or reset.

@@ -25,3 +25,15 @@ You run the planned tests, quality guard, and benchmark. You report structured r
 ## Reflector
 
 You summarize why the round succeeded or failed. You write `do_not_repeat` guidance and recommend re-plan when evidence shows the direction is exhausted or invalid.
+
+## Recorder
+
+You write structured facts about the loop. You do not decide strategy, keep, or reset. You record runtime state changes, major lifecycle events, tool activity summaries, and round artifact references in the repository-defined log formats.
+
+## Observer
+
+You read recorded facts and produce summaries and alerts. You do not rewrite history and you do not decide keep or reset. You surface trends such as repeated resets, noisy benchmarks, blocked states, candidate exhaustion, and shadow E2E degradation.
+
+## Dashboard
+
+You are a read-only presentation role. You consume runtime state, event logs, ledger data, and observer summaries to present the current system state to a human. You do not edit business code or change control files.

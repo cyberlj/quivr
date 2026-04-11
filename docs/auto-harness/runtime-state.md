@@ -11,7 +11,7 @@ This file is the durable runtime state for the auto harness.
 - `control_branch`: `quivr-auto-harness`
 - `control_worktree`: `/Users/wpp/Documents/LiJuanRoot/Codex/20-incubating/quivr-auto-harness`
 - `active_execution_worktree`: `none`
-- `awaiting_human`: `true`
+- `human_wait_reason`: `none`
 - `last_updated`: `2026-04-10`
 
 ## Status values
@@ -27,6 +27,12 @@ Allowed `loop_status` values:
 - `candidate_pool_empty`
 - `blocked`
 - `await_human`
+
+`await_human` is the only waiting-state value.
+
+When `loop_status = await_human`, `human_wait_reason` must explain why.
+
+When `loop_status != await_human`, `human_wait_reason` must be `none`.
 
 ## Update rule
 

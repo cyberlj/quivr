@@ -100,6 +100,8 @@ The review must compare the round plan against:
 - `experiment-ledger.tsv`
 - `reflection-log.md`
 
+The review must also confirm that the candidate is still valid for selection under the candidate lifecycle rules.
+
 Allowed review outcomes:
 
 - `approved`
@@ -136,6 +138,32 @@ The system must return to planning if:
 - the active strategic plan no longer matches the best available evidence
 
 If there are no valid candidates left, the system must not loop on re-plan. It must enter `candidate_pool_empty` or `await_human`.
+
+## Candidate lifecycle
+
+Candidates move through this lifecycle:
+
+1. `new`
+2. `ready`
+3. `active`
+4. one of:
+   - `kept`
+   - `reset`
+   - `blocked`
+   - `exhausted`
+   - `closed`
+
+Lifecycle rules:
+
+- `new` -> `ready` after evidence and verification fields are complete
+- `ready` -> `active` when selected for a round
+- `active` -> `kept` when the round keeps
+- `active` -> `reset` when the round resets but the direction is still retryable
+- `reset` -> `ready` after reflection confirms the candidate remains retryable and the next round plan changes the approach enough to satisfy the novelty check
+- `active` -> `blocked` when a prerequisite is missing
+- `active` -> `exhausted` when repeated evidence says this direction should stop
+- `kept` or `closed` candidates are not selectable again
+- `exhausted` candidates are not selectable again unless a later decision log explicitly reopens them
 
 ## Memory rule
 

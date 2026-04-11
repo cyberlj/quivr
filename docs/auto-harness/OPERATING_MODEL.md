@@ -52,7 +52,8 @@ A round gets `Gate = 1` only if all of the following are true:
 - quality guard passes
 - no crash or timeout occurs
 - no obvious functional regression appears
-- benchmark results are valid enough to compare
+- primary gain benchmark results are valid enough to compare
+- shadow E2E smoke does not report a hard compatibility failure
 
 Otherwise:
 
@@ -72,12 +73,23 @@ For performance rounds:
 
 `Gain = (baseline_full_session_p50_ms - new_full_session_p50_ms) / baseline_full_session_p50_ms`
 
+For performance rounds, `Gain` is computed from the primary gain benchmark only.
+
+Shadow E2E results are secondary signals. They may:
+
+- confirm that the real user path still works
+- raise warnings
+- trigger review when they diverge sharply from the primary gain trend
+
+They do not redefine the Phase 1 baseline by themselves.
+
 ## Keep and reset rules
 
 - `Gate = 0` -> `reset`
 - `Gate = 1` and `Gain <= 0` -> `reset`
 - `Gate = 1` and `Gain > 0` -> `keep`
 - `Gate = 1`, `Gain > 0`, but `session_p90_ms` regresses beyond the guard threshold -> `needs_review`, not an automatic keep
+- `Gate = 1`, `Gain > 0`, but shadow E2E reports degraded compatibility or suspicious divergence -> `needs_review`, not an automatic keep
 
 ## Candidate classes
 
@@ -125,6 +137,38 @@ Every candidate must be recorded with:
 These records live in:
 
 - `docs/auto-harness/candidate-registry.tsv`
+
+Candidate registry fields require controlled value sets.
+
+- `status` allowed values:
+  - `new`
+  - `ready`
+  - `active`
+  - `kept`
+  - `reset`
+  - `blocked`
+  - `exhausted`
+  - `closed`
+- `last_result` allowed values:
+  - `none`
+  - `keep`
+  - `reset`
+  - `inconclusive`
+  - `noisy`
+  - `blocked`
+- `do_not_repeat` allowed values:
+  - `none`
+  - `round_only`
+  - `direction`
+  - `candidate`
+
+A candidate is valid for selection only when:
+
+- `status` is `new`, `ready`, or `reset`
+- `do_not_repeat` is `none`
+- it is not blocked by missing assets
+
+If no valid candidates remain, the loop must enter `candidate_pool_empty` or `await_human`.
 
 ## Round loop
 
@@ -178,12 +222,14 @@ Benchmark policy:
 - 5 measured runs
 - main comparison metric: `full_session_p50_ms`
 - guard metric: `session_p90_ms`
+- shadow E2E runs as a secondary observation layer
 
 Benchmark result rules:
 
 - absolute improvement below 5 percent -> `inconclusive`
 - two reruns with opposite direction -> `noisy`
 - p50 improves but p90 regresses by more than 15 percent -> `needs_review`
+- shadow E2E instability alone does not rewrite the primary gain baseline
 
 ## Autonomy policy
 
@@ -206,6 +252,7 @@ Execution must stop and report to the human if:
 - the first live run is about to start
 - 5 rounds fail without a keep
 - benchmark validity collapses for 2 rounds in a row
+- shadow E2E repeatedly fails in a way that suggests the real Kimi path is no longer trustworthy
 - the candidate pool is empty
 - the loop is blocked on missing information or missing assets
 - the mutable surface must expand
