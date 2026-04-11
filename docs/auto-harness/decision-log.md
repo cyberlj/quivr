@@ -121,3 +121,9 @@ This file records stable design decisions for the Phase 1 auto harness.
 - Decision: Keep or reset must be decided by a fixed VSG evaluator script with structured output.
 - Why: The conductor should consume one mechanical decision surface, not recompute `Gate` and `Gain` from scattered logs in working memory.
 - Alternatives rejected: manual keep or reset judgment from raw verification artifacts.
+
+## D-021
+
+- Decision: When multiple implementations satisfy the Phase 1 control requirements, prefer the simplest one. Small incremental gains do not justify added operational or structural complexity.
+- Why: Phase 1 needs a trustworthy runnable loop more than architectural completeness. Extra modules, states, and workflows increase failure surface and slow execution unless they deliver clear near-term value.
+- Alternatives rejected: adding abstractions, roles, or infrastructure early to make the system look more complete without immediate loop value.
