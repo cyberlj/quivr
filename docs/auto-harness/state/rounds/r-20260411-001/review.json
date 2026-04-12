@@ -1,0 +1,14 @@
+{
+  "allows_execution": true,
+  "priority_check": "candidate_valid",
+  "repeat_check": "novel",
+  "requires_human": false,
+  "reset_check": "present",
+  "review_notes": [
+    "plan is approved for execution"
+  ],
+  "review_outcome": "approved",
+  "round_id": "r-20260411-001",
+  "scope_check": "bounded",
+  "verification_check": "complete"
+}

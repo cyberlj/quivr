@@ -1,9 +1,16 @@
 from importlib.metadata import entry_points
 
-from .brain import Brain
 from .processor.registry import register_processor, registry
 
 __all__ = ["Brain", "registry", "register_processor"]
+
+
+def __getattr__(name: str):
+    if name == "Brain":
+        from .brain import Brain
+
+        return Brain
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def register_entries():

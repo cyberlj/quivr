@@ -1,0 +1,9 @@
+{
+  "lessons": [
+    "root_cause=tests_failed",
+    "do_not_repeat=do not rerun the same round without addressing tests_failed"
+  ],
+  "replan_recommendation": "re-plan before another round; address tests_failed; current candidate status=active",
+  "round_id": "r-20260412-002",
+  "summary": "reset: default worker simulation completed"
+}

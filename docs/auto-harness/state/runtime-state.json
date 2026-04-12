@@ -1,0 +1,12 @@
+{
+  "active_execution_worktree": null,
+  "active_round_id": null,
+  "control_branch": "quivr-auto-harness",
+  "control_worktree": "/Users/wpp/Documents/LiJuanRoot/Codex/20-incubating/quivr-auto-harness",
+  "current_best_candidate_id": "perf-context-001",
+  "current_best_commit": "cc65a479",
+  "current_best_round_id": "r-20260412-004",
+  "human_wait_reason": "none",
+  "last_updated": "2026-04-12T11:33:10Z",
+  "loop_status": "planning"
+}

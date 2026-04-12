@@ -1,1 +1,7 @@
 
+{"agent_id": "worker-1", "event_id": "tool-r-20260412-002-worker", "observation_maintenance": false, "origin_role": "Worker", "recorded_at": "2026-04-12T11:19:28Z", "round_id": "r-20260412-002", "tools": ["worker_runner"]}
+{"agent_id": "verifier-1", "event_id": "tool-r-20260412-002-verifier", "observation_maintenance": false, "origin_role": "Verifier", "recorded_at": "2026-04-12T11:19:32Z", "round_id": "r-20260412-002", "tools": ["run_tests", "run_quality_guard", "run_benchmark", "run_shadow_e2e"]}
+{"agent_id": "worker-1", "event_id": "tool-r-20260412-003-worker", "observation_maintenance": false, "origin_role": "Worker", "recorded_at": "2026-04-12T11:32:44Z", "round_id": "r-20260412-003", "tools": ["worker_runner"]}
+{"agent_id": "verifier-1", "event_id": "tool-r-20260412-003-verifier", "observation_maintenance": false, "origin_role": "Verifier", "recorded_at": "2026-04-12T11:32:44Z", "round_id": "r-20260412-003", "tools": ["run_tests", "run_quality_guard", "run_benchmark", "run_shadow_e2e"]}
+{"agent_id": "worker-1", "event_id": "tool-r-20260412-004-worker", "observation_maintenance": false, "origin_role": "Worker", "recorded_at": "2026-04-12T11:33:10Z", "round_id": "r-20260412-004", "tools": ["worker_runner"]}
+{"agent_id": "verifier-1", "event_id": "tool-r-20260412-004-verifier", "observation_maintenance": false, "origin_role": "Verifier", "recorded_at": "2026-04-12T11:33:10Z", "round_id": "r-20260412-004", "tools": ["run_tests", "run_quality_guard", "run_benchmark", "run_shadow_e2e"]}

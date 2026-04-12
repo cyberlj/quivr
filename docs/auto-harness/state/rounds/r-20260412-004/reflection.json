@@ -1,0 +1,9 @@
+{
+  "lessons": [
+    "root_cause=verified_gain",
+    "do_not_repeat=do not widen the mutable surface while carrying forward the winning change"
+  ],
+  "replan_recommendation": "promote learning and continue with the next bounded candidate; current candidate status=active",
+  "round_id": "r-20260412-004",
+  "summary": "keep: default worker simulation completed"
+}

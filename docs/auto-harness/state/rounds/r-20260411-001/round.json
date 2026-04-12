@@ -1,0 +1,28 @@
+{
+  "allowed_files": [
+    "core/quivr_core/rag/quivr_rag.py"
+  ],
+  "benchmark_command": "uv run python -m quivr_core.auto_harness.run_benchmark",
+  "candidate_class": "performance",
+  "candidate_family": "rag",
+  "candidate_id": "perf-history-001",
+  "direction": "history-trim",
+  "execution_worktree": null,
+  "expected_risk": "medium",
+  "forbidden_files": [
+    "docs/auto-harness/runtime-state.md",
+    "docs/auto-harness/round-plan.md",
+    "docs/auto-harness/plan-review.md"
+  ],
+  "hypothesis": "Optimize history-trim in quivr_rag.py.",
+  "novelty_check": "Direction history-trim must be novel against recent ledger and reflection history.",
+  "quality_guard_command": "uv run python -m quivr_core.auto_harness.run_quality_guard",
+  "reset_rule": "Reset immediately on failed tests, failed quality guard, or invalid benchmark.",
+  "round_id": "r-20260411-001",
+  "round_type": "performance",
+  "shadow_command": "uv run python -m quivr_core.auto_harness.run_shadow_e2e",
+  "success_rule": "Keep only if deterministic gates stay green and p50 improves.",
+  "tests_command": "uv run pytest tests/test_quivr_rag.py tests/test_chat_history.py -v",
+  "vsg_command": "uv run python -m quivr_core.auto_harness.vsg",
+  "why_now": "chat history handling is in the RAG hotspot. Current best commit is cc65a479."
+}

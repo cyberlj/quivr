@@ -1,0 +1,18 @@
+{
+  "agent_id": "verifier-1",
+  "allowed_commands": [
+    "core/scripts/auto_harness/execute_guard.sh verifier --round-id r-20260412-004 --agent-id verifier-1"
+  ],
+  "allowed_files": [
+    "core/quivr_core/rag/quivr_rag.py"
+  ],
+  "forbidden_actions": [
+    "edit_code",
+    "keep",
+    "reset",
+    "edit_runtime_state"
+  ],
+  "role": "Verifier",
+  "round_id": "r-20260412-004",
+  "worktree": "/Users/wpp/Documents/LiJuanRoot/Codex/20-incubating/quivr-auto-harness/.worktrees/wt-r-20260412-004"
+}

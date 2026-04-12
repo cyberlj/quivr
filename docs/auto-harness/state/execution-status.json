@@ -1,0 +1,69 @@
+{
+  "active_plan": "docs/auto-harness/phase1-mvp-implementation-plan.md",
+  "last_updated": "2026-04-12",
+  "status_owner": "current implementation branch",
+  "completed_tasks": [
+    "task-1-contracts-and-machine-state",
+    "task-2-candidate-service-and-bootstrap-registry",
+    "task-3-planner-reviewer-and-rendered-views",
+    "task-4-worktree-and-agent-launcher",
+    "task-5-wrapper-guards",
+    "task-5a-doctor-and-resume-surface",
+    "task-5b-docs-lint",
+    "task-6-worker-runner-contract",
+    "task-7-deterministic-test-runner-and-quality-guard",
+    "task-8-deterministic-primary-benchmark",
+    "task-9-real-shadow-e2e",
+    "task-10-verifier-and-vsg",
+    "task-11-reflector-recorder-and-observer",
+    "task-12-controller-failure-paths-and-durable-write-backs",
+    "task-13-dry-run-acceptance",
+    "follow-up-real-keep-integration"
+  ],
+  "verified_commands": [
+    {
+      "command": "./.venv/bin/python -m pytest --noconftest tests/auto_harness/test_contracts.py tests/auto_harness/test_state_store.py tests/auto_harness/test_candidate_service.py tests/auto_harness/test_planner.py tests/auto_harness/test_reviewer.py tests/auto_harness/test_worktree.py tests/auto_harness/test_launcher.py tests/auto_harness/test_wrappers.py tests/auto_harness/test_post_edit_check.py tests/auto_harness/test_doctor.py tests/auto_harness/test_harness_docs_lint.py tests/auto_harness/test_worker_runner.py tests/auto_harness/test_run_tests.py tests/auto_harness/test_run_quality_guard.py tests/auto_harness/test_run_benchmark.py tests/auto_harness/test_run_shadow_e2e.py tests/auto_harness/test_vsg.py tests/auto_harness/test_reflector.py tests/auto_harness/test_recorder.py tests/auto_harness/test_observer.py tests/auto_harness/test_controller.py tests/auto_harness/test_keep_integration.py -v",
+      "result": "98 passed"
+    },
+    {
+      "command": "./.venv/bin/python -m quivr_core.auto_harness.harness_docs_lint --docs-root ../docs/auto-harness",
+      "result": "docs lint passed"
+    },
+    {
+      "command": "./.venv/bin/python -m quivr_core.auto_harness.doctor --docs-root ../docs/auto-harness",
+      "result": "doctor completed; readiness_issues=[OPENAI_API_KEY]"
+    },
+    {
+      "command": "./.venv/bin/python -m quivr_core.auto_harness.controller --once",
+      "result": "dry-run acceptance completed with round_id=r-20260412-004 status=keep under dry-run-safe keep policy"
+    }
+  ],
+  "known_blockers": [
+    "repo-wide pytest currently trips over core/tests/conftest.py import chain before auto-harness tests run",
+    "uv run pytest is blocked in this environment by ~/.cache/uv access, so targeted verification used core/.venv",
+    "controller --once needs escalated permission for git worktree creation because this repo writes worktree metadata through a parent .git directory outside the workspace sandbox",
+    "shadow E2E still resolves to skipped_env_missing in acceptance because OPENAI_API_KEY is not set in this environment"
+  ],
+  "next_task": {
+    "id": "follow-up-exercise-real-keep-path-in-repo",
+    "title": "Exercise Real Keep Path In Repo"
+  },
+  "continuation_notes": [
+    "Reuse the existing Task 1 to Task 3 code and tests instead of redoing them.",
+    "Task 4 worktree and launcher code is in place and covered by targeted tests.",
+    "Task 5 wrapper guards and post-edit checks are in place and covered by targeted tests.",
+    "Task 5A doctor and Task 5B docs_lint are in place and covered by targeted tests.",
+    "Task 6 worker_runner contract is in place and covered by targeted tests.",
+    "Task 7 run_tests and run_quality_guard are in place and covered by targeted tests.",
+    "Task 8 run_benchmark is in place and covered by targeted tests.",
+    "Task 9 run_shadow_e2e is in place and covered by targeted tests.",
+    "Task 10 verifier and vsg are in place and covered by targeted tests.",
+    "Task 11 reflector, recorder, and observer are in place and covered by targeted tests.",
+    "Task 12 controller, failure paths, durable write-backs, and round archiving are in place and covered by targeted tests.",
+    "Task 13 dry-run acceptance is complete. The latest canonical dry-run round is r-20260412-004 and all required state files, archive files, markdown views, and worktree cleanup were verified.",
+    "The default controller keep path now supports real keep integration: when allowed_files contain a real code diff, the execution worktree commits only those files and pins the resulting commit at refs/auto-harness/keeps/<round_id>.",
+    "The latest repo acceptance round r-20260412-004 still used the dry-run-safe fallback because the default worker simulation produced no code diff to commit. The next useful step is to exercise the real keep path with an actual code-editing worker round.",
+    "Treat docs/auto-harness/state/execution-status.json as the canonical implementation progress record for this plan.",
+    "Do not use this file as the shared runtime state surface for multi-agent loop rounds."
+  ]
+}

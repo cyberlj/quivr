@@ -1,0 +1,20 @@
+{
+  "api_event_id": null,
+  "benchmark_gain_pct": 0.0,
+  "benchmark_status": "valid",
+  "benchmark_summary": {
+    "avg_turn_p50_ms": 30.333333333333332,
+    "corpus_id": "small-team-corpus-v1",
+    "first_turn_p50_ms": 29.0,
+    "full_session_p50_ms": 91.0,
+    "session_id": "multiturn-session-v1",
+    "session_p90_ms": 95.0,
+    "status": "valid",
+    "storage_path": "/Users/wpp/Documents/LiJuanRoot/Codex/20-incubating/quivr-auto-harness/.worktrees/wt-r-20260412-002/core/.runtime/storage",
+    "temp_path": "/Users/wpp/Documents/LiJuanRoot/Codex/20-incubating/quivr-auto-harness/.worktrees/wt-r-20260412-002/core/.runtime/tmp"
+  },
+  "quality_passed": true,
+  "round_id": "r-20260412-002",
+  "shadow_status": "skipped_env_missing",
+  "tests_passed": false
+}

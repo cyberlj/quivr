@@ -1,0 +1,9 @@
+{
+  "round_id": "r-20260412-003",
+  "tools": [
+    "run_tests",
+    "run_quality_guard",
+    "run_benchmark",
+    "run_shadow_e2e"
+  ]
+}

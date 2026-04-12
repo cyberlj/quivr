@@ -1,1 +1,5 @@
 candidate_id	candidate_family	direction	candidate_class	source	target_path	evidence	verification	status	last_result	do_not_repeat	notes
+perf-history-001	rag	history-trim	performance	review-findings	core/quivr_core/rag/quivr_rag.py	chat history handling is in the RAG hotspot	run focused rag tests plus deterministic benchmark	kept	none	none	bootstrap candidate for history-path performance work
+perf-context-001	rag	context-pack	performance	review-findings	core/quivr_core/rag/quivr_rag.py	context assembly sits on the same hotspot path	run focused rag tests plus deterministic quality guard	kept	none	none	bootstrap candidate for context assembly tuning
+perf-langgraph-001	rag	langgraph-route	performance	review-findings	core/quivr_core/rag/quivr_rag_langgraph.py	langgraph routing is a separate hotspot	run langgraph-focused tests plus deterministic benchmark	reset	none	none	bootstrap candidate for langgraph path work
+todo-blocker-001	rag	todo-audit	todo	review-findings	core/quivr_core/rag/quivr_rag.py	todo and blocker cleanup can unblock later rounds	run focused rag tests after cleanup	ready	none	none	bootstrap maintenance candidate behind performance work

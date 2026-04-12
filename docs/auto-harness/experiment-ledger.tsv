@@ -1,1 +1,4 @@
 round_id	candidate_id	candidate_family	direction	round_type	failure_class	worktree_id	start_commit	end_commit	tests_passed	quality_guard_passed	benchmark_status	baseline_full_session_p50_ms	new_full_session_p50_ms	baseline_session_p90_ms	new_session_p90_ms	gate	gain	decision	notes
+r-20260412-002	perf-langgraph-001	rag	langgraph-route	performance	valid	wt-r-20260412-002	cc65a479	cc65a479-changed-r-20260412-002	false	true	valid	100.0	91.0	100.0	95.0	0	0.0	reset	completed
+r-20260412-003	perf-history-001	rag	history-trim	performance	none	wt-r-20260412-003	cc65a479	cc65a479	true	true	valid	100.0	91.0	100.0	95.0	1	0.09	keep	keep accepted under dry-run-safe policy; real baseline integration is still pending
+r-20260412-004	perf-context-001	rag	context-pack	performance	none	wt-r-20260412-004	cc65a479	cc65a479	true	true	valid	100.0	91.0	100.0	95.0	1	0.09	keep	keep accepted under dry-run-safe policy; real baseline integration is still pending

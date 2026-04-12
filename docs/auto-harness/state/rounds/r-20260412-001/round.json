@@ -1,0 +1,28 @@
+{
+  "allowed_files": [
+    "core/quivr_core/rag/quivr_rag.py"
+  ],
+  "benchmark_command": "python -m quivr_core.auto_harness.run_benchmark",
+  "candidate_class": "performance",
+  "candidate_family": "rag",
+  "candidate_id": "perf-context-001",
+  "direction": "context-pack",
+  "execution_worktree": null,
+  "expected_risk": "medium",
+  "forbidden_files": [
+    "docs/auto-harness/runtime-state.md",
+    "docs/auto-harness/round-plan.md",
+    "docs/auto-harness/plan-review.md"
+  ],
+  "hypothesis": "Optimize context-pack in quivr_rag.py.",
+  "novelty_check": "Direction context-pack must be novel against recent ledger and reflection history.",
+  "quality_guard_command": "python -m quivr_core.auto_harness.run_quality_guard",
+  "reset_rule": "Reset immediately on failed tests, failed quality guard, or invalid benchmark.",
+  "round_id": "r-20260412-001",
+  "round_type": "performance",
+  "shadow_command": "python -m quivr_core.auto_harness.run_shadow_e2e",
+  "success_rule": "Keep only if deterministic gates stay green and p50 improves.",
+  "tests_command": "python -m pytest tests/test_quivr_rag.py tests/test_chat_history.py -v",
+  "vsg_command": "python -m quivr_core.auto_harness.vsg",
+  "why_now": "context assembly sits on the same hotspot path. Current best commit is cc65a479."
+}

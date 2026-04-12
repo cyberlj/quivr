@@ -127,3 +127,21 @@ This file records stable design decisions for the Phase 1 auto harness.
 - Decision: When multiple implementations satisfy the Phase 1 control requirements, prefer the simplest one. Small incremental gains do not justify added operational or structural complexity.
 - Why: Phase 1 needs a trustworthy runnable loop more than architectural completeness. Extra modules, states, and workflows increase failure surface and slow execution unless they deliver clear near-term value.
 - Alternatives rejected: adding abstractions, roles, or infrastructure early to make the system look more complete without immediate loop value.
+
+## D-022
+
+- Decision: `docs/auto-harness/state/execution-status.json` is reserved for active implementation-plan progress and continuation, not for shared multi-agent round runtime state.
+- Why: Control-plane roles share the control worktree. Letting multiple loop roles co-own one progress file would blur ownership and create avoidable write conflicts. Multi-agent round runtime must keep using role-owned state, ledger, and log surfaces.
+- Alternatives rejected: using `execution-status.json` as a general-purpose runtime coordination file for all loop roles.
+
+## D-023
+
+- Decision: Task 13 dry-run acceptance must use a dry-run-safe keep policy until real keep integration writes a real commit back to `current_best_commit`.
+- Why: The controller currently has a runnable control flow before it has a production-grade keep integration path. Dry-run acceptance must not advance the baseline to a synthetic or nonexistent commit. The implementation plan still requires a later real keep integration that writes an actual integrated commit hash.
+- Alternatives rejected: letting dry-run acceptance write synthetic commit identifiers into runtime state, or postponing the dry-run loop until after every production keep detail exists.
+
+## D-024
+
+- Decision: Real keep integration commits only `allowed_files` in the execution worktree and pins the resulting commit under `refs/auto-harness/keeps/<round_id>`. If `allowed_files` contain no staged diff, keep falls back to the dry-run-safe policy and does not advance `current_best_commit`.
+- Why: Execution worktrees are detached and share the common object store. A kept commit must be referenced to avoid becoming unreachable. Limiting the commit to `allowed_files` avoids accidentally promoting verifier or runtime artifacts such as `.runtime/` output. The dry-run-safe fallback is still required for simulated or no-op worker rounds.
+- Alternatives rejected: committing the whole worktree with `git add --all`, relying on detached HEAD commits without a ref, or forcing every keep to advance the baseline even when no code delta exists.

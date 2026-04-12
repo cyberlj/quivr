@@ -1,0 +1,17 @@
+{
+  "agent_id": "worker-1",
+  "allowed_commands": [
+    "core/scripts/auto_harness/execute_guard.sh worker --round-id r-20260412-002 --agent-id worker-1"
+  ],
+  "allowed_files": [
+    "core/quivr_core/rag/quivr_rag_langgraph.py"
+  ],
+  "forbidden_actions": [
+    "keep",
+    "reset",
+    "edit_runtime_state"
+  ],
+  "role": "Worker",
+  "round_id": "r-20260412-002",
+  "worktree": "/Users/wpp/Documents/LiJuanRoot/Codex/20-incubating/quivr-auto-harness/.worktrees/wt-r-20260412-002"
+}

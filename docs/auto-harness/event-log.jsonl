@@ -1,1 +1,4 @@
 
+{"event_id": "evt-r-20260412-002-complete", "kind": "round_complete", "observation_maintenance": false, "origin_role": "Conductor", "payload": {"decision": "reset", "failure_class": "valid"}, "recorded_at": "2026-04-12T11:19:32Z", "round_id": "r-20260412-002"}
+{"event_id": "evt-r-20260412-003-complete", "kind": "round_complete", "observation_maintenance": false, "origin_role": "Conductor", "payload": {"decision": "keep", "failure_class": "none"}, "recorded_at": "2026-04-12T11:32:44Z", "round_id": "r-20260412-003"}
+{"event_id": "evt-r-20260412-004-complete", "kind": "round_complete", "observation_maintenance": false, "origin_role": "Conductor", "payload": {"decision": "keep", "failure_class": "none"}, "recorded_at": "2026-04-12T11:33:10Z", "round_id": "r-20260412-004"}
